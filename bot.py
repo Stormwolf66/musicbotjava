@@ -37,7 +37,6 @@ FFMPEG_OPTIONS = {
 
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
-
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
         super().__init__(source, volume)
@@ -64,7 +63,8 @@ async def on_ready():
 @bot.command(name='join')
 async def join(ctx):
     if ctx.author.voice:
-        await ctx.author.voice.channel.connect()
+        if ctx.voice_client is None:
+            await ctx.author.voice.channel.connect()
         await ctx.send("✅ Joined the voice channel.")
     else:
         await ctx.send("❌ You are not in a voice channel.")
@@ -82,7 +82,6 @@ async def leave(ctx):
 @bot.command(name='play')
 async def play(ctx, url: str):
     voice_client = ctx.voice_client
-
     if not voice_client:
         if ctx.author.voice:
             voice_client = await ctx.author.voice.channel.connect()
@@ -117,9 +116,12 @@ async def playtest(ctx):
     if voice_client.is_playing():
         voice_client.stop()
 
-    source = discord.FFmpegPCMAudio("test.mp3", executable=FFMPEG_PATH)
-    voice_client.play(source)
-    await ctx.send("🎧 Playing local test audio (`test.mp3`)...")
+    try:
+        source = discord.FFmpegPCMAudio("test.mp3", executable=FFMPEG_PATH)
+        voice_client.play(source)
+        await ctx.send("🎧 Playing local test audio (`test.mp3`)...")
+    except Exception as e:
+        await ctx.send(f"❌ Error playing test.mp3: {str(e)}")
 
 
 @bot.event
