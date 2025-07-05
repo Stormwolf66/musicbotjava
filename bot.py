@@ -24,8 +24,10 @@ YTDL_OPTIONS = {
     'ignoreerrors': False,
     'logtostderr': False,
     'cachedir': False,
-    'source_address': '0.0.0.0'
+    'source_address': '0.0.0.0',
+    'cookiefile': 'cookies.txt'   # <--- Add this line
 }
+
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
