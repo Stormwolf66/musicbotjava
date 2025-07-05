@@ -101,4 +101,3 @@ async def on_voice_state_update(member, before, after):
                 await text_channel.send("Bye 😢 I was disconnected from the voice channel.")
                 break
 
-bot.run(os.getenv("DISCORD_BOT_TOKEN"))
