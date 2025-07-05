@@ -4,14 +4,16 @@ import yt_dlp
 import asyncio
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
-FFMPEG_PATH = "/app/vendor/ffmpeg/ffmpeg"
-
+# Use system ffmpeg executable (Heroku installs it globally)
+FFMPEG_PATH = "ffmpeg"
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.voice_states = True  # Required for on_voice_state_update
+intents.voice_states = True  # Required for voice state updates
+
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 YTDL_OPTIONS = {
@@ -26,16 +28,16 @@ YTDL_OPTIONS = {
     'logtostderr': False,
     'cachedir': False,
     'source_address': '0.0.0.0',
-    'cookiefile': 'cookies.txt'   # <--- Add this line
+    'cookiefile': 'cookies.txt'  # Add your YouTube cookies here
 }
-
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn'
+    'options': '-vn'  # No video
 }
 
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
+
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
@@ -54,6 +56,13 @@ class YTDLSource(discord.PCMVolumeTransformer):
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, executable=FFMPEG_PATH, **FFMPEG_OPTIONS), data=data)
 
+
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user} (ID: {bot.user.id})')
+    print('------')
+
+
 @bot.command(name='join', help='Tells the bot to join the voice channel')
 async def join(ctx):
     if not ctx.author.voice:
@@ -61,7 +70,8 @@ async def join(ctx):
         return
     await ctx.author.voice.channel.connect()
 
-@bot.command(name='leave', help='To make the bot leave the voice channel')
+
+@bot.command(name='leave', help='Makes the bot leave the voice channel')
 async def leave(ctx):
     voice_client = ctx.guild.voice_client
     if voice_client and voice_client.is_connected():
@@ -70,7 +80,8 @@ async def leave(ctx):
     else:
         await ctx.send("I'm not in a voice channel.")
 
-@bot.command(name='play', help='To play a song from a YouTube URL')
+
+@bot.command(name='play', help='Play a song from a YouTube URL')
 async def play(ctx, url: str):
     voice_client = ctx.guild.voice_client
 
@@ -91,16 +102,22 @@ async def play(ctx, url: str):
             await ctx.send(f"❌ Error: {str(e)}")
             return
 
-        voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
+        def after_playing(error):
+            if error:
+                print(f'Player error: {error}')
+
+        voice_client.play(player, after=after_playing)
         await ctx.send(f'🎶 Now playing: **{player.title}**')
 
 
+@bot.event
 async def on_voice_state_update(member, before, after):
+    # If the bot was disconnected manually from voice
     if member == bot.user and before.channel is not None and after.channel is None:
-        # Bot was disconnected manually
-        for text_channel in before.channel.guild.text_channels:
-            if text_channel.permissions_for(before.channel.guild.me).send_messages:
-                await text_channel.send("Bye 😢 I was disconnected from the voice channel.")
+        for channel in before.channel.guild.text_channels:
+            if channel.permissions_for(before.channel.guild.me).send_messages:
+                await channel.send("Bye 😢 I was disconnected from the voice channel.")
                 break
+
 
 bot.run(os.getenv("DISCORD_BOT_TOKEN"))
