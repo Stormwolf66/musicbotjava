@@ -6,7 +6,8 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-FFMPEG_PATH = "ffmpeg"
+FFMPEG_PATH = "/app/vendor/ffmpeg/ffmpeg"
+
 
 intents = discord.Intents.default()
 intents.message_content = True
