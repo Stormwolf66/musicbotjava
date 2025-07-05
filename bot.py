@@ -3,6 +3,8 @@ from discord.ext import commands
 import yt_dlp
 import asyncio
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 FFMPEG_PATH = "./ffemeg/bin/ffmpeg.exe"
 
