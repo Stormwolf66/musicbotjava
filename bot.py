@@ -3,9 +3,6 @@ from discord.ext import commands
 import yt_dlp
 import asyncio
 import os
-from dotenv import load_dotenv
-load_dotenv()
-
 
 FFMPEG_PATH = "./ffemeg/bin/ffmpeg.exe"
 
@@ -92,7 +89,7 @@ async def play(ctx, url: str):
         voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
         await ctx.send(f'🎶 Now playing: **{player.title}**')
 
-@bot.event
+
 async def on_voice_state_update(member, before, after):
     if member == bot.user and before.channel is not None and after.channel is None:
         # Bot was disconnected manually
@@ -101,3 +98,4 @@ async def on_voice_state_update(member, before, after):
                 await text_channel.send("Bye 😢 I was disconnected from the voice channel.")
                 break
 
+bot.run(os.getenv("DISCORD_BOT_TOKEN"))
