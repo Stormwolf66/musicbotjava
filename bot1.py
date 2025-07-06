@@ -20,15 +20,15 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # --- Opus load check ---
 if not discord.opus.is_loaded():
-    try:
-        opus_lib = ctypes.util.find_library("opus")
-        if opus_lib:
-            discord.opus.load_opus(opus_lib)
-            print(f"✅ Loaded Opus from: {opus_lib}")
-        else:
-            raise RuntimeError("Opus library not found.")
-    except Exception as e:
-        print(f"❌ Could not load Opus library: {e}")
+    opus_path = ctypes.util.find_library('opus')
+    if opus_path:
+        try:
+            discord.opus.load_opus(opus_path)
+            print(f"✅ Loaded Opus from: {opus_path}")
+        except Exception as e:
+            print(f"❌ Could not load Opus from {opus_path}: {e}")
+    else:
+        print("❌ Opus library not found in system paths.")
 
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
