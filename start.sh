@@ -1,4 +1,4 @@
 #!/bin/bash
-chmod +x ./ffemeg/ffmpeg
+chmod +x ./ffmpeg/ffmpeg
 python bot1.py
 
