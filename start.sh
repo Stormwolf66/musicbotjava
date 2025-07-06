@@ -9,4 +9,4 @@ apt-get update && apt-get install -y ffmpeg libopus0 libopus-dev python3-pip
 # pip3 install -r requirements.txt
 
 # Run the bot
-python3 bot.py
+python3 bot1.py
