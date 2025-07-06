@@ -3,12 +3,20 @@ from discord.ext import commands
 import yt_dlp
 import asyncio
 import os
+from dotenv import load_dotenv
 
-FFMPEG_PATH = "C:/ffemeg/bin/ffmpeg.exe"
+# Load environment variables
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+
+# Relative path to ffmpeg inside project
+FFMPEG_PATH = os.path.join(os.getcwd(), "ffemeg", "ffmpeg")
+
+
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.voice_states = True  # Required for on_voice_state_update
+intents.voice_states = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 YTDL_OPTIONS = {
@@ -92,9 +100,10 @@ async def play(ctx, url: str):
 @bot.event
 async def on_voice_state_update(member, before, after):
     if member == bot.user and before.channel is not None and after.channel is None:
-        # Bot was disconnected manually
         for text_channel in before.channel.guild.text_channels:
             if text_channel.permissions_for(before.channel.guild.me).send_messages:
                 await text_channel.send("Bye 😢 I was disconnected from the voice channel.")
                 break
+
+bot.run(DISCORD_TOKEN)
 
