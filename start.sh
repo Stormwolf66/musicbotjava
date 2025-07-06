@@ -1,23 +1,12 @@
 #!/bin/bash
-set -e  # Exit immediately if a command exits with a non-zero status
+set -e  # Exit on any error
 
-# Update package lists and install required system libraries
-apt-get update && apt-get install -y libopus0 libopus-dev
+# Update package list and install dependencies
+apt-get update && apt-get install -y ffmpeg libopus0 libopus-dev python3-pip
 
-# Download static ffmpeg binary (Linux 64-bit)
-curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
-
-# Extract the tarball
-tar -xf ffmpeg.tar.xz
-
-# Move ffmpeg binary to project root (adjust if multiple matches)
-mv ffmpeg-*-amd64-static/ffmpeg ./ffmpeg
-
-# Make ffmpeg executable
-chmod +x ./ffmpeg
-
-# Clean up extracted folder and tarball
-rm -rf ffmpeg-*-amd64-static ffmpeg.tar.xz
+# Optionally upgrade pip and install python dependencies from requirements.txt if you have one
+# pip3 install --upgrade pip
+# pip3 install -r requirements.txt
 
 # Run the bot
-python bot1.py
+python3 bot.py
