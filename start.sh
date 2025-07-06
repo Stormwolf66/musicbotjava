@@ -10,4 +10,4 @@ mv ffmpeg-dir/ffmpeg ./ffmpeg
 chmod +x ffmpeg
 
 # Start your bot
-python bot.py
+python bot1.py
