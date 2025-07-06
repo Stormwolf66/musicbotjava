@@ -4,12 +4,13 @@ import yt_dlp
 import asyncio
 import os
 from dotenv import load_dotenv
+import ctypes.util
 
 # Load environment variables
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
-# Relative path to ffmpeg inside project (make sure your start.sh downloads this correctly)
+# Set ffmpeg path (make sure start.sh downloads it)
 FFMPEG_PATH = os.path.join(os.getcwd(), "ffmpeg")
 
 intents = discord.Intents.default()
@@ -19,11 +20,15 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # --- Opus load check ---
 if not discord.opus.is_loaded():
-    # Try loading system libopus (Linux)
     try:
-        discord.opus.load_opus('libopus.so')
+        opus_lib = ctypes.util.find_library("opus")
+        if opus_lib:
+            discord.opus.load_opus(opus_lib)
+            print(f"✅ Loaded Opus from: {opus_lib}")
+        else:
+            raise RuntimeError("Opus library not found.")
     except Exception as e:
-        print(f"Could not load Opus library: {e}")
+        print(f"❌ Could not load Opus library: {e}")
 
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
@@ -37,7 +42,7 @@ YTDL_OPTIONS = {
     'logtostderr': False,
     'cachedir': False,
     'source_address': '0.0.0.0',
-    'cookiefile': 'cookies.txt'  # Your exported YouTube cookies file in project root
+    'cookiefile': 'cookies.txt'
 }
 
 FFMPEG_OPTIONS = {
@@ -74,7 +79,7 @@ async def join(ctx):
     except Exception as e:
         await ctx.send(f"❌ Could not join voice channel: {e}")
 
-@bot.command(name='leave', help='To make the bot leave the voice channel')
+@bot.command(name='leave', help='Make the bot leave the voice channel')
 async def leave(ctx):
     voice_client = ctx.guild.voice_client
     if voice_client and voice_client.is_connected():
@@ -83,7 +88,7 @@ async def leave(ctx):
     else:
         await ctx.send("I'm not in a voice channel.")
 
-@bot.command(name='play', help='To play a song from a YouTube URL')
+@bot.command(name='play', help='Play a song from a YouTube URL')
 async def play(ctx, url: str):
     voice_client = ctx.guild.voice_client
 
