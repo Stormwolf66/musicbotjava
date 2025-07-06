@@ -10,7 +10,7 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 # Relative path to ffmpeg inside project
-FFMPEG_PATH = os.path.join(os.getcwd(), "ffemeg", "ffmpeg")
+FFMPEG_PATH = os.path.join(os.getcwd(), "ffmpeg", "ffmpeg")
 
 
 
