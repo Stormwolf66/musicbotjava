@@ -11,7 +11,7 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 # Use system ffmpeg executable (make sure ffmpeg is installed in your environment)
-FFMPEG_PATH = "ffmpeg"  # Use system PATH ffmpeg
+FFMPEG_PATH = "ffmpeg"  # Just the command, relying on system PATH
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -28,6 +28,7 @@ if not discord.opus.is_loaded():
         except Exception as e:
             print(f"❌ Could not load Opus from {opus_path}: {e}")
     else:
+        # Try hardcoded common path for Ubuntu/Debian systems
         hardcoded_path = "/usr/lib/x86_64-linux-gnu/libopus.so.0"
         try:
             discord.opus.load_opus(hardcoded_path)
@@ -40,20 +41,20 @@ YTDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
+    'extractaudio': True,
+    'audioformat': 'mp3',
+    'outtmpl': 'downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'nocheckcertificate': True,
     'ignoreerrors': False,
     'logtostderr': False,
     'cachedir': False,
-    'source_address': '0.0.0.0',  # Bind to ipv4
-    'user_agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                   'AppleWebKit/537.36 (KHTML, like Gecko) '
-                   'Chrome/115.0.0.0 Safari/537.36'),
-    # No cookies option here — clean for public videos only
+    'source_address': '0.0.0.0',
+    'cookiefile': 'cookies.txt',  # optional; remove if you don't use cookies
 }
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn',
+    'options': '-vn'
 }
 
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
@@ -137,6 +138,7 @@ async def play(ctx, url: str):
 
 @bot.event
 async def on_voice_state_update(member, before, after):
+    # If the bot was disconnected from a voice channel, send message
     if member == bot.user and before.channel is not None and after.channel is None:
         for text_channel in before.channel.guild.text_channels:
             if text_channel.permissions_for(before.channel.guild.me).send_messages:
