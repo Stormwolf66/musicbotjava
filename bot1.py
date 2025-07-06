@@ -10,8 +10,8 @@ import ctypes.util
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
-# Set ffmpeg path (make sure ffmpeg binary is in this path or system PATH)
-FFMPEG_PATH = os.path.join(os.getcwd(), "ffmpeg")  # adjust if needed
+# Use system ffmpeg executable (make sure ffmpeg is installed in your environment)
+FFMPEG_PATH = "ffmpeg"  # Just the command, relying on system PATH
 
 intents = discord.Intents.default()
 intents.message_content = True
