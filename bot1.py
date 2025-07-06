@@ -9,13 +9,21 @@ from dotenv import load_dotenv
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
-# Relative path to ffmpeg inside project
+# Relative path to ffmpeg inside project (make sure your start.sh downloads this correctly)
 FFMPEG_PATH = os.path.join(os.getcwd(), "ffmpeg")
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+# --- Opus load check ---
+if not discord.opus.is_loaded():
+    # Try loading system libopus (Linux)
+    try:
+        discord.opus.load_opus('libopus.so')
+    except Exception as e:
+        print(f"Could not load Opus library: {e}")
 
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
@@ -29,9 +37,8 @@ YTDL_OPTIONS = {
     'logtostderr': False,
     'cachedir': False,
     'source_address': '0.0.0.0',
-    'cookiefile': 'cookies.txt'  # ✅ Add this line
+    'cookiefile': 'cookies.txt'  # Your exported YouTube cookies file in project root
 }
-
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
@@ -62,7 +69,10 @@ async def join(ctx):
     if not ctx.author.voice:
         await ctx.send("You are not connected to a voice channel.")
         return
-    await ctx.author.voice.channel.connect()
+    try:
+        await ctx.author.voice.channel.connect()
+    except Exception as e:
+        await ctx.send(f"❌ Could not join voice channel: {e}")
 
 @bot.command(name='leave', help='To make the bot leave the voice channel')
 async def leave(ctx):
@@ -79,7 +89,11 @@ async def play(ctx, url: str):
 
     if not voice_client:
         if ctx.author.voice:
-            voice_client = await ctx.author.voice.channel.connect()
+            try:
+                voice_client = await ctx.author.voice.channel.connect()
+            except Exception as e:
+                await ctx.send(f"❌ Could not join voice channel: {e}")
+                return
         else:
             await ctx.send("You are not connected to a voice channel.")
             return
@@ -106,4 +120,3 @@ async def on_voice_state_update(member, before, after):
                 break
 
 bot.run(DISCORD_TOKEN)
-
