@@ -49,8 +49,10 @@ YTDL_OPTIONS = {
     'logtostderr': False,
     'cachedir': False,
     'source_address': '0.0.0.0',
-    'cookiefile': 'cookies.txt',  # optional; remove if you don't use cookies
+    'cookies_from_browser': 'chrome',  # This pulls fresh cookies from Chrome automatically
+    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
 }
+
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
