@@ -1,3 +1,3 @@
 #!/bin/bash
 chmod +x ./ffmpeg/ffmpeg
-python bot.py
+python bot1.py
