@@ -133,41 +133,51 @@ async def join(ctx):
         return
     
     try:
+        channel = ctx.author.voice.channel
+        
         # Force cleanup any existing connection with better error handling
         if ctx.guild.voice_client:
+            print(f"Cleaning up existing connection...")
             try:
                 if hasattr(ctx.guild.voice_client, 'ws') and ctx.guild.voice_client.ws:
                     try:
                         await ctx.guild.voice_client.ws.close(4000)
+                        await asyncio.sleep(0.5)
                     except:
                         pass
                 await ctx.guild.voice_client.disconnect(force=True)
-                await asyncio.sleep(2)  # Longer delay for cleanup
+                await asyncio.sleep(3)  # Even longer delay for cleanup
             except Exception as cleanup_error:
                 print(f"Cleanup warning: {cleanup_error}")
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)
         
-        # Connect to voice channel
-        voice_client = await ctx.author.voice.channel.connect(timeout=30.0, reconnect=True)
+        print(f"Attempting to connect to {channel.name}...")
         
-        # Wait a moment for connection to stabilize
-        await asyncio.sleep(1)
+        # Connect with self_deaf=True to reduce voice server load
+        voice_client = await channel.connect(timeout=60.0, reconnect=True, self_deaf=True)
+        
+        # Extended wait for connection to stabilize
+        print("Waiting for connection to stabilize...")
+        await asyncio.sleep(3)
         
         # Verify connection is still active
-        if voice_client.is_connected():
-            await ctx.send(f"✅ Joined {ctx.author.voice.channel.name}!")
-            print(f"Successfully connected to voice channel: {ctx.author.voice.channel.name}")
+        if voice_client and voice_client.is_connected():
+            await ctx.send(f"✅ Joined {channel.name}!")
+            print(f"✅ Successfully connected and stable in: {channel.name}")
         else:
-            await ctx.send("⚠️ Connected but connection unstable. Try `!reset` if issues persist.")
+            await ctx.send("⚠️ Connection unstable. This may be a network/firewall issue blocking UDP voice traffic.")
+            print("⚠️ Connection succeeded but immediately became unstable")
     except asyncio.TimeoutError:
-        await ctx.send("❌ Connection timeout. Try again or use `!reset` first.")
+        await ctx.send("❌ Connection timeout (60s). Network issue or Discord voice server problem.")
+        print("❌ Timeout during voice connection")
     except discord.errors.ConnectionClosed as e:
-        await ctx.send(f"❌ Voice error {e.code}. Use `!reset` then try again.")
+        await ctx.send(f"❌ Voice error {e.code}. This often means:\n• Network/firewall blocking UDP\n• Multiple bot instances running\n• Discord voice server issue")
+        print(f"❌ ConnectionClosed error {e.code}")
     except (IndexError, AttributeError) as e:
-        await ctx.send("❌ Voice state error. Use `!reset` to cleanup and try again.")
+        await ctx.send("❌ Voice state error. Discord.py internal issue. Use `!reset`")
         print(f"Voice state error in join: {type(e).__name__}: {e}")
     except Exception as e:
-        await ctx.send(f"❌ Could not join: {type(e).__name__}. Try `!reset`")
+        await ctx.send(f"❌ Could not join: {type(e).__name__}")
         print(f"Join error: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
@@ -313,7 +323,17 @@ async def voiceinfo(ctx):
     
     try:
         import nacl
+        import nacl.secret
         info.append(f"PyNaCl: ✅ v{nacl.__version__}")
+        
+        # Test PyNaCl encryption functionality
+        try:
+            key = b'0' * 32
+            box = nacl.secret.SecretBox(key)
+            test = box.encrypt(b'test')
+            info.append("PyNaCl encryption: ✅ Working")
+        except Exception as e:
+            info.append(f"PyNaCl encryption: ❌ Failed ({e})")
     except ImportError:
         info.append("PyNaCl: ❌ NOT INSTALLED")
     
@@ -345,6 +365,29 @@ async def testconnection(ctx):
     else:
         await ctx.send("❌ Connection lost! Use `!reset` and try again.")
 
+
+@bot.command(name='fix4006', help='Troubleshooting guide for error 4006')
+async def fix4006(ctx):
+    """Provide troubleshooting steps for 4006 error"""
+    guide = """
+**Error 4006 Troubleshooting Guide:**
+
+**Common Causes:**
+1. **Network/Firewall**: UDP voice packets blocked
+2. **Multiple Bot Instances**: Only run ONE instance
+3. **PyNaCl Issues**: Encryption library problems
+
+**Try These Steps:**
+1. `!voiceinfo` - Check if PyNaCl encryption works
+2. Ensure firewall allows UDP traffic to Discord
+3. Kill all other bot instances with same token
+4. Reinstall PyNaCl: `pip uninstall PyNaCl -y && pip install PyNaCl==1.5.0`
+5. Check if other voice bots work in same server
+6. Try connecting from different network/VPS
+
+**If still failing:** This may be a Discord voice server region issue or deep network problem.
+"""
+    await ctx.send(guide)
 
 
 @bot.command(name='ytinfo', help='Check yt-dlp version and test extraction')
