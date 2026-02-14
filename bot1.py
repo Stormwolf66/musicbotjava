@@ -128,11 +128,28 @@ async def join(ctx):
     
     try:
         # Clean up any existing connection
-        await cleanup_voice_client(ctx.guild)
-        await asyncio.sleep(1)  # Wait for cleanup
+        if ctx.guild.voice_client:
+            try:
+                await ctx.guild.voice_client.disconnect(force=True)
+                await asyncio.sleep(1)
+            except Exception as cleanup_error:
+                print(f"Cleanup warning: {cleanup_error}")
         
+        # Connect to voice channel
         voice_client = await ctx.author.voice.channel.connect(timeout=30.0, reconnect=False)
         await ctx.send(f"✅ Joined {ctx.author.voice.channel.name}!")
+    except asyncio.TimeoutError:
+        await ctx.send("❌ Connection timeout. Discord voice servers may be slow. Try again.")
+    except discord.errors.ConnectionClosed as e:
+        await ctx.send(f"❌ Voice connection failed (Error {e.code}). Try again in a moment.")
+    except IndexError as e:
+        await ctx.send("❌ Connection error. This may be a Discord API issue. Try: 1) Leave the voice channel and rejoin, 2) Try again in a moment.")
+        print(f"IndexError in join: {e}")
+    except Exception as e:
+        await ctx.send(f"❌ Could not join: {type(e).__name__}")
+        print(f"Join error: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
     except asyncio.TimeoutError:
         await ctx.send("❌ Connection timeout. Discord voice servers may be slow. Try again.")
     except discord.errors.ConnectionClosed as e:
@@ -146,10 +163,13 @@ async def leave(ctx):
     voice_client = ctx.guild.voice_client
     if voice_client:
         try:
-            await cleanup_voice_client(ctx.guild)
+            if voice_client.is_playing():
+                voice_client.stop()
+            await voice_client.disconnect(force=True)
             await ctx.send("👋 Disconnected")
         except Exception as e:
-            await ctx.send(f"Disconnected (error: {e})")
+            await ctx.send(f"Disconnected (error: {type(e).__name__})")
+            print(f"Leave error: {e}")
     else:
         await ctx.send("I'm not in a voice channel.")
 
@@ -167,8 +187,12 @@ async def play(ctx, url: str):
         if ctx.author.voice:
             try:
                 # Clean up any stale connections
-                await cleanup_voice_client(ctx.guild)
-                await asyncio.sleep(1)
+                if ctx.guild.voice_client:
+                    try:
+                        await ctx.guild.voice_client.disconnect(force=True)
+                        await asyncio.sleep(1)
+                    except:
+                        pass
                 
                 voice_client = await ctx.author.voice.channel.connect(timeout=30.0, reconnect=False)
             except asyncio.TimeoutError:
@@ -177,8 +201,12 @@ async def play(ctx, url: str):
             except discord.errors.ConnectionClosed as e:
                 await ctx.send(f"❌ Voice connection failed (Error {e.code}). Use `!leave` then try again.")
                 return
+            except IndexError:
+                await ctx.send("❌ Connection error. Try: `!join` first or rejoin your voice channel.")
+                return
             except Exception as e:
-                await ctx.send(f"❌ Could not join: {e}")
+                await ctx.send(f"❌ Could not join: {type(e).__name__}")
+                print(f"Play connection error: {e}")
                 return
         else:
             await ctx.send("You are not connected to a voice channel.")
