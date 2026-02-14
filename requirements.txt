@@ -1,5 +1,4 @@
 discord.py==2.3.2
-yt_dlp
+yt-dlp>=2024.08.06
 python-dotenv
 PyNaCl
-
