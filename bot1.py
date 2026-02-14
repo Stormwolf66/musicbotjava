@@ -38,9 +38,10 @@ if not discord.opus.is_loaded():
             print("❌ Opus library not found. Audio features will not work.")
 
 YTDL_OPTIONS = {
-    'format': 'bestaudio/best',
+    'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
     'noplaylist': True,
     'quiet': True,
+    'no_warnings': False,
     'extractaudio': True,
     'audioformat': 'mp3',
     'outtmpl': 'downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s',
@@ -49,7 +50,9 @@ YTDL_OPTIONS = {
     'logtostderr': False,
     'cachedir': False,
     'source_address': '0.0.0.0',
-    'cookiefile': 'cookies.txt',  # optional; remove if you don't use cookies
+    'cookiefile': 'cookies.txt',
+    'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
+    'age_limit': None,
 }
 
 FFMPEG_OPTIONS = {
@@ -87,8 +90,14 @@ async def join(ctx):
         await ctx.send("You are not connected to a voice channel.")
         return
     try:
-        await ctx.author.voice.channel.connect()
+        # Disconnect if already connected
+        if ctx.guild.voice_client:
+            await ctx.guild.voice_client.disconnect(force=True)
+        
+        await ctx.author.voice.channel.connect(timeout=60.0, reconnect=True)
         await ctx.send(f"Joined {ctx.author.voice.channel.name}!")
+    except asyncio.TimeoutError:
+        await ctx.send("❌ Connection timeout. Please try again.")
     except Exception as e:
         await ctx.send(f"❌ Could not join voice channel: {e}")
 
@@ -96,9 +105,12 @@ async def join(ctx):
 @bot.command(name='leave', help='Make the bot leave the voice channel')
 async def leave(ctx):
     voice_client = ctx.guild.voice_client
-    if voice_client and voice_client.is_connected():
-        await voice_client.disconnect()
-        await ctx.send("Bye 😢")
+    if voice_client:
+        try:
+            await voice_client.disconnect(force=True)
+            await ctx.send("Bye 😢")
+        except Exception as e:
+            await ctx.send(f"Disconnected (with error: {e})")
     else:
         await ctx.send("I'm not in a voice channel.")
 
@@ -110,13 +122,26 @@ async def play(ctx, url: str):
     if not voice_client:
         if ctx.author.voice:
             try:
-                voice_client = await ctx.author.voice.channel.connect()
+                # Disconnect if already connected but not registered
+                if ctx.guild.voice_client:
+                    await ctx.guild.voice_client.disconnect(force=True)
+                    await asyncio.sleep(1)
+                
+                voice_client = await ctx.author.voice.channel.connect(timeout=60.0, reconnect=True)
+            except asyncio.TimeoutError:
+                await ctx.send("❌ Connection timeout. Please try again.")
+                return
             except Exception as e:
                 await ctx.send(f"❌ Could not join voice channel: {e}")
                 return
         else:
             await ctx.send("You are not connected to a voice channel.")
             return
+
+    # Ensure connection is valid
+    if not voice_client.is_connected():
+        await ctx.send("❌ Voice connection lost. Please use !join to reconnect.")
+        return
 
     if voice_client.is_playing():
         voice_client.stop()
@@ -125,7 +150,11 @@ async def play(ctx, url: str):
         try:
             player = await YTDLSource.from_url(url, loop=bot.loop, stream=True)
         except Exception as e:
-            await ctx.send(f"❌ Error: {str(e)}")
+            error_msg = str(e)
+            if "Requested format is not available" in error_msg:
+                await ctx.send("❌ Could not find a playable audio format for this video. The video may be unavailable or region-locked.")
+            else:
+                await ctx.send(f"❌ Error: {error_msg}")
             return
 
         def after_playing(error):
