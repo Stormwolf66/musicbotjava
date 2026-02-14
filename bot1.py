@@ -69,26 +69,32 @@ async def cleanup_voice_client(guild):
             pass
 
 YTDL_OPTIONS = {
-    'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
+    'format': 'bestaudio/best',
     'noplaylist': True,
-    'quiet': True,
+    'quiet': False,
     'no_warnings': False,
-    'extractaudio': True,
-    'audioformat': 'mp3',
     'outtmpl': 'downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'nocheckcertificate': True,
     'ignoreerrors': False,
     'logtostderr': False,
-    'cachedir': False,
+    'default_search': 'auto',
     'source_address': '0.0.0.0',
     'cookiefile': 'cookies.txt',
-    'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
-    'age_limit': None,
+    'extractor_args': {
+        'youtube': {
+            'player_client': ['android', 'ios', 'web'],
+            'player_skip': ['webpage', 'configs'],
+        }
+    },
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'best',
+    }],
 }
 
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn'
+    'options': '-vn -b:a 128k'
 }
 
 ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
@@ -225,10 +231,16 @@ async def play(ctx, url: str):
             player = await YTDLSource.from_url(url, loop=bot.loop, stream=True)
         except Exception as e:
             error_msg = str(e)
+            print(f"YouTube extraction error: {error_msg}")
+            
             if "Requested format is not available" in error_msg:
-                await ctx.send("❌ Could not find a playable audio format for this video. The video may be unavailable or region-locked.")
+                await ctx.send("❌ No playable format found. Try:\n1. Update yt-dlp: `pip install -U yt-dlp`\n2. Try a different video\n3. Check if video is age-restricted")
+            elif "Video unavailable" in error_msg:
+                await ctx.send("❌ Video is unavailable or private.")
+            elif "Sign in to confirm" in error_msg or "age" in error_msg.lower():
+                await ctx.send("❌ Age-restricted video. Bot cannot play these.")
             else:
-                await ctx.send(f"❌ Error: {error_msg}")
+                await ctx.send(f"❌ Download error: {error_msg[:100]}")
             return
 
         def after_playing(error):
@@ -258,6 +270,15 @@ async def voiceinfo(ctx):
     else:
         info.append("Connected: ❌")
     
+    await ctx.send("\n".join(info))
+
+
+@bot.command(name='ytinfo', help='Check yt-dlp version and test extraction')
+async def ytinfo(ctx):
+    """Check yt-dlp version"""
+    info = []
+    info.append(f"yt-dlp version: {yt_dlp.version.__version__}")
+    info.append(f"FFMPEG path: {FFMPEG_PATH}")
     await ctx.send("\n".join(info))
 
 
