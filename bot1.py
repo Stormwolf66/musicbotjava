@@ -148,8 +148,17 @@ async def join(ctx):
                 await asyncio.sleep(1)
         
         # Connect to voice channel
-        voice_client = await ctx.author.voice.channel.connect(timeout=30.0, reconnect=False)
-        await ctx.send(f"✅ Joined {ctx.author.voice.channel.name}!")
+        voice_client = await ctx.author.voice.channel.connect(timeout=30.0, reconnect=True)
+        
+        # Wait a moment for connection to stabilize
+        await asyncio.sleep(1)
+        
+        # Verify connection is still active
+        if voice_client.is_connected():
+            await ctx.send(f"✅ Joined {ctx.author.voice.channel.name}!")
+            print(f"Successfully connected to voice channel: {ctx.author.voice.channel.name}")
+        else:
+            await ctx.send("⚠️ Connected but connection unstable. Try `!reset` if issues persist.")
     except asyncio.TimeoutError:
         await ctx.send("❌ Connection timeout. Try again or use `!reset` first.")
     except discord.errors.ConnectionClosed as e:
@@ -240,7 +249,12 @@ async def play(ctx, url: str):
                     except:
                         pass
                 
-                voice_client = await ctx.author.voice.channel.connect(timeout=30.0, reconnect=False)
+                voice_client = await ctx.author.voice.channel.connect(timeout=30.0, reconnect=True)
+                await asyncio.sleep(1)  # Let connection stabilize
+                
+                if not voice_client.is_connected():
+                    await ctx.send("❌ Connection failed. Use `!join` first.")
+                    return
             except asyncio.TimeoutError:
                 await ctx.send("❌ Connection timeout. Use `!reset` then `!join` first.")
                 return
@@ -306,11 +320,31 @@ async def voiceinfo(ctx):
     vc = ctx.guild.voice_client
     if vc:
         info.append(f"Connected: ✅ {vc.channel.name}")
+        info.append(f"Is connected: {'✅' if vc.is_connected() else '❌'}")
         info.append(f"Playing: {'✅' if vc.is_playing() else '❌'}")
+        info.append(f"Latency: {vc.latency*1000:.0f}ms" if hasattr(vc, 'latency') and vc.latency else "Latency: N/A")
     else:
         info.append("Connected: ❌")
     
     await ctx.send("\n".join(info))
+
+
+@bot.command(name='testconnection', help='Test if voice connection stays alive')
+async def testconnection(ctx):
+    """Test voice connection stability"""
+    vc = ctx.guild.voice_client
+    if not vc:
+        await ctx.send("❌ Not connected to voice. Use `!join` first.")
+        return
+    
+    await ctx.send("🔄 Testing connection stability...")
+    await asyncio.sleep(2)
+    
+    if vc.is_connected():
+        await ctx.send(f"✅ Connection stable! Still connected to {vc.channel.name}")
+    else:
+        await ctx.send("❌ Connection lost! Use `!reset` and try again.")
+
 
 
 @bot.command(name='ytinfo', help='Check yt-dlp version and test extraction')
